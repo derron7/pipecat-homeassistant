@@ -4568,7 +4568,7 @@ def _build_stt_service(
 ):
     step, integration = _step_integration(config, flow, "stt")
     integration = _require_integration(integration, "STT", fields=())
-    model = _step_model_for(step, integration, "stt")
+    model = _step_model_for(step, integration, "stt", _ha_stt_model_fallback(integration))
     language = _runtime_language(flow, integration, language_override)
     logger.info(
         "Building composed STT service integration={} kind={} model={} language={}",
@@ -4590,7 +4590,7 @@ def _build_stt_service(
 
         return DeepgramSTTService(
             api_key=_integration_api_key(integration, "STT"),
-            settings=DeepgramSTTService.Settings(model=model or None),
+            settings=DeepgramSTTService.Settings(model=model or None, language=language),
         )
     if integration.kind == "speechmatics":
         from pipecat.services.speechmatics.stt import SpeechmaticsSTTService
