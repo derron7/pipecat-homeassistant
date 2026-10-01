@@ -1,3 +1,0 @@
-websockets>=13.1
-elevenlabs>=1.50.0
-pipecat-ai[elevenlabs]
