@@ -1,0 +1,76 @@
+name: Build UI bundle
+
+on:
+  # Manueller Start über den Actions-Tab (Button "Run workflow")
+  workflow_dispatch:
+  # Automatisch, sobald sich der UI-Quellcode ändert.
+  # Kein Endlos-Loop: der Bot-Commit ändert nur app/ui/,
+  # dieser Trigger hört aber ausschließlich auf ui-src/**.
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - "addons/pipecat_assist/ui-src/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ui:
+    name: Build and commit UI bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Auf dem Branch auschecken (nicht detached), damit wir pushen können
+          ref: ${{ github.ref_name }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          # pnpm-workspace.yaml nutzt 'allowBuilds' -> braucht pnpm 10
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          # vite 7 braucht Node >= 20.19; 22 ist die sichere Wahl
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: addons/pipecat_assist/ui-src/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: addons/pipecat_assist/ui-src
+        run: pnpm install --frozen-lockfile
+
+      - name: Build bundle (writes to ../app/ui)
+        working-directory: addons/pipecat_assist/ui-src
+        run: pnpm build
+
+      - name: Verify ElevenLabs code is in the bundle
+        run: |
+          BUNDLE=addons/pipecat_assist/app/ui/index.js
+          echo "Bundle size: $(wc -c < "$BUNDLE") bytes"
+          AGENT=$(grep -c "elevenlabs_agent" "$BUNDLE" || true)
+          TEMPLATE=$(grep -c "elevenlabs_live" "$BUNDLE" || true)
+          echo "elevenlabs_agent occurrences: $AGENT"
+          echo "elevenlabs_live occurrences:  $TEMPLATE"
+          if [ "$AGENT" -lt 1 ] || [ "$TEMPLATE" -lt 1 ]; then
+            echo "::error::ElevenLabs code missing from the built bundle!"
+            exit 1
+          fi
+
+      - name: Commit and push bundle
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add addons/pipecat_assist/app/ui/
+          if git diff --cached --quiet; then
+            echo "Bundle unchanged - nothing to commit."
+            exit 0
+          fi
+          git commit -m "Rebuild UI bundle [skip ci]"
+          git push
