@@ -1,0 +1,26 @@
+configuration:
+  elevenlabs_agent_api_key:
+    name: ElevenLabs Agent API Key
+    description: >
+      API-Key aus deinem ElevenLabs-Konto. Wird für die Authentifizierung
+      beim Aufbau der WebSocket-Verbindung zum Conversational AI Agenten
+      verwendet.
+  elevenlabs_agent_id:
+    name: ElevenLabs Agent ID
+    description: >
+      ID des Agenten, den du im ElevenLabs-Dashboard angelegt hast. Der
+      Agent definiert Prompt, Stimme, Sprache und Tools.
+  elevenlabs_agent_base_url:
+    name: ElevenLabs WebSocket Base URL
+    description: >
+      Nur ändern, wenn du einen eigenen Proxy vor ElevenLabs betreibst.
+  elevenlabs_agent_first_message:
+    name: Begrüßung (optional)
+    description: >
+      Optionale Begrüßung, die der Agent direkt nach dem Verbindungsaufbau
+      spricht.
+  elevenlabs_agent_enable_client_tools:
+    name: Home Assistant MCP Tools freigeben
+    description: >
+      Registriert die aktiven Home Assistant MCP Tools als ElevenLabs
+      Client-Tools, damit der Agent sie während des Gesprächs aufrufen kann.
