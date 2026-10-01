@@ -5,3 +5,26 @@ configuration:
   log_level:
     name: Log level
     description: Application log level.
+  elevenlabs_agent_api_key:
+    name: ElevenLabs Agent API Key
+    description: >
+      API key from your ElevenLabs account. Required for signed-URL
+      authentication when connecting to a Conversational AI agent.
+  elevenlabs_agent_id:
+    name: ElevenLabs Agent ID
+    description: >
+      ID of the agent you created in the ElevenLabs dashboard. The agent
+      defines prompt, voice, language and tools.
+  elevenlabs_agent_base_url:
+    name: ElevenLabs WebSocket Base URL
+    description: >
+      Keep the default unless you run your own proxy in front of ElevenLabs.
+  elevenlabs_agent_first_message:
+    name: First message (optional)
+    description: >
+      Optional greeting the agent speaks as soon as the session opens.
+  elevenlabs_agent_enable_client_tools:
+    name: Expose Home Assistant MCP tools
+    description: >
+      Registers the active Home Assistant MCP tools as ElevenLabs client
+      tools so the agent can call them during the conversation.
