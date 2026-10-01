@@ -4273,7 +4273,7 @@ def _runtime_flow_errors(config: RuntimeConfig, flow: FlowConfig) -> list[str]:
     runtime_mode = _runtime_mode(flow, provider_kind)
 
     if runtime_mode == "s2s":
-        if provider_kind not in {"openai", "gemini", "aws_nova_sonic"}:
+        if provider_kind not in {"openai", "gemini", "aws_nova_sonic", "elevenlabs_agent"}:
             errors.append(f"Realtime speech-to-speech runtime for {provider_kind} is not supported.")
         if any(step.kind in {"stt", "tts"} and step.enabled for step in flow.steps):
             errors.append("Speech-to-speech pipelines cannot use separate STT or TTS steps.")
@@ -4536,7 +4536,29 @@ def _openai_realtime_service(
         ),
     )
 
-
+def _elevenlabs_live_service(
+    *,
+    api_key: str,
+    integration: IntegrationConfig,
+    mcp_bridge=None,
+):
+    from app.elevenlabs_live import ElevenLabsLiveService, ElevenLabsLiveSettings
+ 
+    tool_handler = None
+    if mcp_bridge is not None:
+ 
+        async def tool_handler(tool_name: str, parameters: dict) -> str:
+            return await mcp_bridge.call_tool(tool_name, parameters)
+ 
+    return ElevenLabsLiveService(
+        settings=ElevenLabsLiveSettings(
+            api_key=api_key or integration.api_key,
+            agent_id=integration.agent_id,
+            base_url=integration.base_url or "wss://api.elevenlabs.io",
+        ),
+        tool_handler=tool_handler,
+    )
+    
 def _aws_nova_sonic_service(
     *,
     integration: IntegrationConfig,
@@ -4947,7 +4969,7 @@ async def run_bot(
     audio_debug = None
 
     if runtime_mode == "s2s":
-        if provider_kind not in {"openai", "gemini", "aws_nova_sonic"}:
+        if provider_kind not in {"openai", "gemini", "aws_nova_sonic", "elevenlabs_agent"}:
             raise RuntimeError(
                 f"Realtime speech-to-speech runtime for {provider_kind} is not supported"
             )
@@ -4956,6 +4978,10 @@ async def run_bot(
             api_key = (integration.api_key if integration else "") or os.getenv("GOOGLE_API_KEY", "")
         elif provider_kind == "openai":
             api_key = (integration.api_key if integration else "") or config.openai_api_key
+        elif provider_kind == "elevenlabs_agent":
+            api_key = (integration.api_key if integration else "") or os.getenv(
+                "ELEVENLABS_AGENT_API_KEY", os.getenv("ELEVENLABS_API_KEY", "")
+            )
         else:
             api_key = ""
 
@@ -4980,6 +5006,18 @@ async def run_bot(
                 model=realtime_model,
                 tools_schema=tools_schema,
             )
+        elif provider_kind == "elevenlabs_agent":
+            integration = _require_integration(
+                integration,
+                "ElevenLabs Agent (Live)",
+                fields=("agent_id",),
+            )
+            realtime_model = integration.agent_id
+            llm = _elevenlabs_live_service(
+                api_key=api_key,
+                integration=integration,
+                mcp_bridge=bridge if (flow.mcp_enabled and bridge) else None,
+            )
         elif provider_kind == "gemini":
             realtime_model = _model_name(flow, integration, provider_kind)
             llm = _gemini_live_service(
@@ -4999,7 +5037,8 @@ async def run_bot(
                 integration=integration,
                 tools_schema=tools_schema,
             )
-        _register_local_tool_handlers(llm, local_tool_schemas)
+        if provider_kind != "elevenlabs_agent":
+            _register_local_tool_handlers(llm, local_tool_schemas)
 
         logger.info(
             "Starting {} speech-to-speech model {} for flow {}",
@@ -5008,7 +5047,7 @@ async def run_bot(
             flow.id,
         )
 
-        if bridge and mcp_tools_schema:
+        if bridge and mcp_tools_schema and provider_kind != "elevenlabs_agent":
             await bridge.register_tools_schema(mcp_tools_schema, llm)
 
         greeting_messages = (
