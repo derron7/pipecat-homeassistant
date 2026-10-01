@@ -571,6 +571,7 @@ const providerKinds = [
   ["gradium", "Gradium", Cloud],
   ["speechmatics", "Speechmatics", Cloud],
   ["elevenlabs", "ElevenLabs", Cloud],
+  ["elevenlabs_agent", "ElevenLabs Agent (Live)", Radio],
   ["anthropic", "Anthropic", Cloud],
   ["aws_bedrock", "Bedrock", Cloud],
   ["aws_nova_sonic", "AWS Nova Sonic", Radio],
@@ -638,12 +639,13 @@ const stepProviders = {
   tts: ["cartesia", "gradium", "google_cloud_tts", "google_streaming_tts", "elevenlabs", "openai_cloud", "soniox"],
   tools: ["home_assistant_mcp", "ha_mcp", "mcp_server"],
   web_search: ["web_search"],
-  output: ["gemini", "openai", "aws_nova_sonic"],
+  output: ["gemini", "openai", "aws_nova_sonic", "elevenlabs_agent"],
 };
 const runtimeStepOrder = ["transport", "memory", "vad", "stt", "llm", "web_search", "tools", "flow", "tts", "output"];
 
 function allowedProvidersForStep(kind, mode) {
-  if (kind === "llm" && mode === "realtime") return ["gemini", "openai", "aws_nova_sonic"];
+  if (kind === "llm" && mode === "realtime")     
+    return ["gemini", "openai", "aws_nova_sonic", "elevenlabs_agent"];
   if (kind === "output" && mode === "composed") return [];
   return stepProviders[kind] || null;
 }
@@ -708,6 +710,22 @@ const templates = [
       ["output", "output", "Native audio", "aws-nova-sonic"],
     ],
   },
+  {
+    id: "elevenlabs_live",
+    label: "ElevenLabs Live",
+    icon: Radio,
+    group: "Speech-to-speech",
+    mode: "realtime",
+    provider: "elevenlabs-agent",
+    accent: "rose",
+    steps: [
+      ["transport", "transport", "SmallWebRTC", ""],
+      ["memory", "memory", "Session memory", ""],
+      ["llm", "llm", "ElevenLabs Agent", "elevenlabs-agent"],
+      ["tools", "tools", "HA MCP tools", "ha-mcp"],
+      ["output", "output", "Native audio", "elevenlabs-agent"],
+    ],
+  },  
   {
     id: "soniox_openai_cartesia",
     label: "Soniox + OpenAI + Cartesia",
@@ -1448,7 +1466,8 @@ function providerDefaults(provider) {
   if (provider === "soniox") return { model: SONIOX_MODEL, text_model: "", voice: "" };
   if (provider === "deepgram") return { model: DEEPGRAM_MODEL, text_model: "", voice: "" };
   if (provider === "cartesia") return { model: CARTESIA_MODEL, text_model: "", voice: CARTESIA_VOICE };
-  if (provider === "elevenlabs") return { model: ELEVENLABS_MODEL, text_model: "", voice: ELEVENLABS_VOICE };
+  if (provider === "elevenlabs") return { model: ELEVENLABS_MODEL, text_model: "", voice: ELEVENLABS_VOICE };   
+  if (provider === "elevenlabs-agent" || provider === "elevenlabs_agent") return { model: "", text_model: "", voice: "" };
   if (provider === "google-cloud-tts" || provider === "google_cloud_tts") {
     return { model: "google-tts", text_model: "", voice: GOOGLE_TTS_VOICE };
   }
@@ -1582,7 +1601,11 @@ function deriveFlowMode(flow, config) {
   const hasTts = steps.some((step) => step.kind === "tts" && step.enabled);
   const llm = steps.find((step) => step.kind === "llm" && step.enabled);
   const providerKind = providerKindForIntegration(config, llm?.integration_id || flow.provider_id);
-  if (!hasStt && !hasTts && ["gemini", "openai", "aws_nova_sonic"].includes(providerKind)) {
+  if (     
+    !hasStt &&     
+    !hasTts &&     
+    ["gemini", "openai", "aws_nova_sonic", "elevenlabs_agent"].includes(providerKind)   
+  ) {
     return "realtime";
   }
   return "composed";
@@ -1757,6 +1780,7 @@ function integrationSummary(integration, config = null) {
       "gradium",
       "speechmatics",
       "elevenlabs",
+      "elevenlabs_agent",
       "google_imagen",
       "fal_image",
     ].includes(integration.kind)
@@ -2640,7 +2664,7 @@ function validatePipeline(config, flow) {
       errors.push(`${integration.name} cannot be used as ${step.kind.toUpperCase()}.`);
     }
     if (
-      ["gemini", "gemini_cloud", "openai", "openai_cloud", "soniox", "deepgram", "cartesia", "gradium", "speechmatics", "elevenlabs"].includes(
+      ["gemini", "gemini_cloud", "openai", "openai_cloud", "soniox", "deepgram", "cartesia", "gradium", "speechmatics", "elevenlabs", "elevenlabs_agent"].includes(
         integration.kind,
       ) &&
       secretStatus(integration, "api_key") === "missing"
@@ -4348,6 +4372,42 @@ function IntegrationSettings({
     );
   }
 
+  if (integration.kind === "elevenlabs_agent") {
+    return (
+      <>
+        <SettingsSection
+          title="ElevenLabs Agent (Live)"
+          status={secretStatus(integration, "api_key")}
+        >
+          <SecretSetting
+            integration={integration}
+            field="api_key"
+            label="API key"
+            updateIntegration={updateIntegration}
+          />
+          <TextSetting
+            integration={integration}
+            field="agent_id"
+            label="Agent ID"
+            updateIntegration={updateIntegration}
+            wide
+          />
+          <TextSetting
+            integration={integration}
+            field="base_url"
+            label="WebSocket base URL"
+            updateIntegration={updateIntegration}
+            wide
+          />
+        </SettingsSection>
+        <div className="empty-state wide">
+          STT, LLM, TTS and turn-taking run on the ElevenLabs Agents platform.
+          Create the agent at elevenlabs.io/app/agents and paste its ID here.
+        </div>
+      </>
+    );
+  }
+  
   if (["cartesia", "elevenlabs"].includes(integration.kind)) {
     return (
       <SettingsSection title={kindLabel(integration.kind)} status={secretStatus(integration, "api_key")}>
