@@ -280,3 +280,53 @@ Copy or install `custom_components/pipecat_assist` from this repository, then
 add the integration in Home Assistant. The add-on URL is auto-detected through
 Supervisor when possible and remains editable for custom installations. The
 integration provides Conversation, STT, TTS, and the Lovelace card asset.
+
+## ElevenLabs Agent (Live)
+
+Die neue **ElevenLabs Live** Pipeline ist ein vollwertiges Speech-to-Speech-Profil
+wie Gemini Live oder OpenAI Realtime: STT, LLM und TTS laufen komplett auf der
+ElevenLabs-Plattform, Pipecat transportiert nur das Audio über WebRTC und
+kümmert sich um Interrupts und Tool-Calls.
+
+### Voraussetzungen
+
+- Ein ElevenLabs-Konto mit einem gültigen API-Key.
+- Ein im ElevenLabs-Dashboard angelegter Conversational AI Agent
+  (<https://elevenlabs.io/app/agents>). Notiere dir die **Agent ID**.
+- (Optional) Im Agent definierte **Client Tools**, die du gegen den
+  Home Assistant MCP Server mappen willst.
+
+### Einrichtung
+
+1. Addon starten und Web-UI öffnen.
+2. **Integrations > ElevenLabs Agent (Live)** öffnen.
+3. **API Key** und **Agent ID** eintragen, speichern.
+4. Unter **Pipelines** das Profil **ElevenLabs Live** auswählen (oder ein
+   eigenes Profil mit Provider *elevenlabs_live* anlegen).
+5. **Assistant > Start voice test** — das Browser-Mikrofon wird verbunden,
+   der Agent meldet sich mit seiner First Message (falls konfiguriert).
+
+### Home Assistant MCP Tools im Agenten nutzen
+
+Damit der ElevenLabs-Agent Geräte schalten kann, legst du im ElevenLabs-
+Dashboard einen *Client Tool* mit dem Namen und dem JSON-Schema der
+entsprechenden Home Assistant Action an (z.B. `light.turn_on`). Das
+Addon beantwortet den `client_tool_call`-Event automatisch mit dem
+Ergebnis des MCP-Tools. Über **Integrations > ElevenLabs Agent (Live) >
+Enable MCP client tools** kannst du das Feature komplett abschalten.
+
+### Audioformat
+
+ElevenLabs erwartet 16 kHz, mono, PCM16. Der Service resampelt das
+Mikrofon-Audio des Addons automatisch; die Ausgabe wird mit der im Addon
+konfigurierten Output-Rate an den Browser bzw. Satelliten zurückgegeben.
+
+### Bekannte Einschränkungen
+
+- Pipecat Flows werden für Speech-to-Speech-Profile nicht unterstützt,
+  auch nicht für ElevenLabs Live — die Orchestrierung übernimmt der
+  ElevenLabs-Agent selbst.
+- Der Home Assistant Assist Bridge-Modus ist best-effort; für echtes
+  Full-Duplex mit Barge-In solltest du die Lovelace-Karte oder das
+  Addon-Assistant-Card verwenden.
+
