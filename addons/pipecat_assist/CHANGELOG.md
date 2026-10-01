@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.82
+
+- Gemini Live Support added.
+  
+## 0.1.81
+- Fork
+- Added Deepgram missing language and model tag.
+
 ## 0.1.80
 
 - Coalesce streaming user and assistant transcript tokens into cumulative
