@@ -50,7 +50,10 @@ device control through MCP.
   features rather than hidden provider toggles.
 - **Home Assistant AI Tasks support** for generated data and image-generation
   tasks, using dedicated image providers such as Google Imagen or fal.
-
+- **Cloud provider integrations** for Gemini, OpenAI, Soniox, Deepgram, Speechmatics,
+  Cartesia, Gradium, **ElevenLabs (Agents Live + TTS)**, Google Cloud TTS, AWS Bedrock,
+  AWS Nova Sonic, and OpenAI-compatible endpoints.
+  
 ## Where you can use it
 
 - **Pipecat Assist add-on UI**: a full-width assistant card for quick browser
@@ -178,10 +181,10 @@ flowchart LR
    AWS, ElevenLabs, Google Cloud TTS HTTP fallback/Streaming,
    OpenAI-compatible endpoints, Ollama, local runtimes, and Web Search can be
    added from **Integrations**.
-4. Choose or create a pipeline. The built-in catalog includes realtime
-   speech-to-speech profiles and composed realtime profiles such as
-   `Soniox + OpenAI + Cartesia`, `Deepgram + Gemini + Google TTS`, and
-   `Speechmatics + AWS Nova Pro + ElevenLabs`.
+4. Choose or create a pipeline. The built-in catalog includes realtime speech-to-speech profiles such as
+  `Gemini Live`, `OpenAI Realtime`, `AWS Nova Sonic` and **`ElevenLabs Live`**,
+  plus composed realtime profiles such as `Soniox + OpenAI + Cartesia`,
+  `Deepgram + Gemini + Google TTS`, and `Speechmatics + AWS Nova Pro + ElevenLabs`.
 5. For ESPHome, add the bundled `va_pipecat` external component and enable
    `api.custom_services`. The add-on discovers and provisions the satellite
    automatically. **Runtime > ESPHome satellite** also exposes a manual
@@ -231,6 +234,15 @@ The flow editor stores nodes, transition functions, JSON schemas, and optional
 Home Assistant MCP tool calls. For speech-to-speech services, the UI disables
 the Pipecat Flow tile because Pipecat Flows does not currently support Gemini
 Live or OpenAI Realtime S2S APIs.
+
+### ElevenLabs Live
+ 
+The `ElevenLabs Live` profile is a speech-to-speech pipeline that delegates
+STT, LLM and TTS to ElevenLabs' Conversational AI platform. You provide an
+**Agent ID** and an **API key**, Pipecat streams the microphone audio over
+WebSocket and plays back the agent's audio in full duplex. Home Assistant
+MCP tools are exposed as ElevenLabs *client tools* so the agent can switch
+lights, run scenes and call scripts during the conversation.
 
 ## Home Assistant Assist and Lovelace
 
