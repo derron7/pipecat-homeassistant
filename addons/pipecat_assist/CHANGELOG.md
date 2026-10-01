@@ -1,8 +1,11 @@
 # Changelog
 
+## 0.1.83
+- Some fixes for project building.
+
 ## 0.1.82
 
-- Gemini Live Support added.
+- Elevnlabs Live Support added.
   
 ## 0.1.81
 - Fork
