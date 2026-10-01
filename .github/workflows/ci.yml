@@ -51,3 +51,32 @@ jobs:
             --volume "${{ github.workspace }}/tests:/tests:ro" \
             pipecat-assist-ci \
             -m unittest discover -s /tests -v
+
+  ui-bundle:
+    name: UI bundle in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: addons/pipecat_assist/ui-src/pnpm-lock.yaml
+      - name: Install dependencies
+        working-directory: addons/pipecat_assist/ui-src
+        run: pnpm install --frozen-lockfile
+      - name: Build bundle
+        working-directory: addons/pipecat_assist/ui-src
+        run: pnpm build
+      - name: Fail if committed bundle is stale
+        run: |
+          if ! git diff --quiet -- addons/pipecat_assist/app/ui/; then
+            echo "::error::app/ui is out of date. Run the 'Build UI bundle' workflow."
+            git diff --stat -- addons/pipecat_assist/app/ui/
+            exit 1
+          fi
+          echo "Bundle is in sync."
+           
