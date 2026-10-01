@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.85
+- Fix wrong file location
+
 ## 0.1.84
 - Replace old Elevenlabs Live Integration with a completely new one
   
