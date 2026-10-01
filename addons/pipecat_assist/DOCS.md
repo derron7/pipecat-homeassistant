@@ -283,28 +283,41 @@ integration provides Conversation, STT, TTS, and the Lovelace card asset.
 
 ## ElevenLabs Agent (Live)
 
-Die neue **ElevenLabs Live** Pipeline ist ein vollwertiges Speech-to-Speech-Profil
-wie Gemini Live oder OpenAI Realtime: STT, LLM und TTS laufen komplett auf der
-ElevenLabs-Plattform, Pipecat transportiert nur das Audio über WebRTC und
-kümmert sich um Interrupts und Tool-Calls.
+Das Profil **ElevenLabs Live** ist ein Speech-to-Speech-Profil wie Gemini
+Live: STT, LLM, TTS und Turn-Taking laufen komplett auf der ElevenLabs
+Agents Platform. Pipecat transportiert das Audio über WebRTC und leitet
+Tool-Calls an den Home Assistant MCP Server weiter.
 
 ### Voraussetzungen
 
-- Ein ElevenLabs-Konto mit einem gültigen API-Key.
-- Ein im ElevenLabs-Dashboard angelegter Conversational AI Agent
-  (<https://elevenlabs.io/app/agents>). Notiere dir die **Agent ID**.
-- (Optional) Im Agent definierte **Client Tools**, die du gegen den
-  Home Assistant MCP Server mappen willst.
+1. ElevenLabs-Konto mit API-Key (Settings → API Keys).
+2. Ein Agent unter <https://elevenlabs.io/app/agents>:
+   - **Voice/TTS output format**: PCM 16000 (wichtig!)
+   - **User input audio format**: PCM 16000
+   - Prompt, Stimme, Sprache und First Message dort konfigurieren.
+3. Für Gerätesteuerung: **Client Tools** im Agenten anlegen, deren Name
+   und Parameter-Schema den Home Assistant MCP Tools entsprechen
+   (z. B. `HassTurnOn` mit Parameter `name`). Das Addon beantwortet
+   jeden `client_tool_call` automatisch mit dem MCP-Ergebnis.
 
 ### Einrichtung
 
-1. Addon starten und Web-UI öffnen.
-2. **Integrations > ElevenLabs Agent (Live)** öffnen.
-3. **API Key** und **Agent ID** eintragen, speichern.
-4. Unter **Pipelines** das Profil **ElevenLabs Live** auswählen (oder ein
-   eigenes Profil mit Provider *elevenlabs_live* anlegen).
-5. **Assistant > Start voice test** — das Browser-Mikrofon wird verbunden,
-   der Agent meldet sich mit seiner First Message (falls konfiguriert).
+1. Addon-UI → **Integrations → ElevenLabs Agent (Live)**: API-Key und
+   Agent ID eintragen, Integration aktivieren, speichern.
+2. **Pipelines → New pipeline → ElevenLabs Live** auswählen (oder eine
+   bestehende Pipeline auf das Template umstellen).
+3. Pipeline als aktiv auswählen und **Assistant → Start voice test**.
+
+### Hinweise
+
+- Der API-Key wird für die Signed-URL-Authentifizierung privater Agents
+  verwendet. Öffentliche Agents funktionieren auch ohne Key.
+- Begrüßung ("First message") wird im ElevenLabs-Dashboard konfiguriert,
+  nicht im Addon — das Greeting-Feld der Pipeline wird ignoriert.
+- Barge-In funktioniert voll duplex: ElevenLabs-Interruption-Events
+  werden als Pipecat-Interruption durch die Pipeline gereicht.
+- Pipecat Flows und Web Search sind für dieses Profil nicht verfügbar
+  (die Orchestrierung übernimmt der ElevenLabs-Agent).
 
 ### Home Assistant MCP Tools im Agenten nutzen
 
