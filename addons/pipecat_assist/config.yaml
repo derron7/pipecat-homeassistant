@@ -1,9 +1,9 @@
 name: Pipecat Assist
 version: "0.1.82"
 slug: pipecat_assist
-description: Realtime Pipecat assistant for Home Assistant with MCP device control and ESP32 satellite support.
-url: https://github.com/kyvaith/pipecat-homeassistant
-image: ghcr.io/kyvaith/pipecat-homeassistant/pipecat-assist
+description: Realtime Pipecat assistant for Home Assistant with MCP device control and ESP32 satellite (Voice PE) support.
+url: https://github.com/derron7/pipecat-homeassistant
+image: ghcr.io/derron7/pipecat-homeassistant/pipecat-assist
 arch:
   - aarch64
   - amd64
