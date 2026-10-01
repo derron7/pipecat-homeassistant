@@ -20,6 +20,16 @@ hassio_role: manager
 options:
   runner_port: 7860
   log_level: "INFO"
+  elevenlabs_agent_api_key: ""
+  elevenlabs_agent_id: ""
+  elevenlabs_agent_base_url: "wss://api.elevenlabs.io"
+  elevenlabs_agent_first_message: ""
+  elevenlabs_agent_enable_client_tools: true  
 schema:
   runner_port: port
   log_level: list(DEBUG|INFO|WARNING|ERROR)
+  elevenlabs_agent_api_key: password
+  elevenlabs_agent_id: str?
+  elevenlabs_agent_base_url: str
+  elevenlabs_agent_first_message: str?
+  elevenlabs_agent_enable_client_tools: bool
