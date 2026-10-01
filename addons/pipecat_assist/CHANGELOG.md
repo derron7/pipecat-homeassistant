@@ -1,11 +1,14 @@
 # Changelog
 
+## 0.1.84
+- Replace old Elevenlabs Live Integration with a completely new one
+  
 ## 0.1.83
 - Some fixes for project building.
 
 ## 0.1.82
 
-- Elevnlabs Live Support added.
+- Elevenlabs Live Support added.
   
 ## 0.1.81
 - Fork
