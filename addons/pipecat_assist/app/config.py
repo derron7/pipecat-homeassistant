@@ -161,6 +161,7 @@ class IntegrationConfig(BaseModel):
         "gradium",
         "speechmatics",
         "elevenlabs",
+        "elevenlabs_agent",
         "anthropic",
         "aws_bedrock",
         "aws_nova_sonic",
@@ -182,6 +183,7 @@ class IntegrationConfig(BaseModel):
     endpoint: str = ""
     region: str = ""
     deployment: str = ""
+    agent_id: str = ""
     language: str = "en"
     speed: float = Field(default=1.0, ge=0.25, le=1.5)
     tts_streaming_mode: Literal["sentence", "token"] = "sentence"
@@ -339,6 +341,19 @@ def default_integrations() -> list[IntegrationConfig]:
             default_model=os.getenv("ELEVENLABS_TTS_MODEL", DEFAULT_ELEVENLABS_MODEL),
             default_voice=os.getenv("ELEVENLABS_TTS_VOICE", DEFAULT_ELEVENLABS_VOICE),
         ),
+        IntegrationConfig(
+            id="elevenlabs-agent",
+            name="ElevenLabs Agent (Live)",
+            kind="elevenlabs_agent",
+            enabled=bool(
+                os.getenv("ELEVENLABS_AGENT_API_KEY") and os.getenv("ELEVENLABS_AGENT_ID")
+            ),
+            api_key=os.getenv(
+                "ELEVENLABS_AGENT_API_KEY", os.getenv("ELEVENLABS_API_KEY", "")
+            ),
+            agent_id=os.getenv("ELEVENLABS_AGENT_ID", ""),
+            base_url=os.getenv("ELEVENLABS_AGENT_BASE_URL", "wss://api.elevenlabs.io"),
+        ),        
         IntegrationConfig(
             id="anthropic",
             name="Anthropic",
@@ -515,6 +530,7 @@ class FlowConfig(BaseModel):
         "realtime_home",
         "gemini_live_home",
         "aws_nova_sonic",
+        "elevenlabs_live",
         "soniox_openai_cartesia",
         "soniox_openai_gradium",
         "deepgram_gemini_google_tts",
@@ -1058,7 +1074,9 @@ def _strip_unsupported_s2s_flow_steps(config: RuntimeConfig, flow: FlowConfig) -
     has_stt = any(step.kind == "stt" and step.enabled for step in flow.steps)
     has_tts = any(step.kind == "tts" and step.enabled for step in flow.steps)
     is_s2s = flow.mode == "realtime" or (
-        not has_stt and not has_tts and provider_kind in {"gemini", "openai", "aws_nova_sonic"}
+        not has_stt
+        and not has_tts
+        and provider_kind in {"gemini", "openai", "aws_nova_sonic", "elevenlabs_agent"}
     )
     if not is_s2s:
         return False
