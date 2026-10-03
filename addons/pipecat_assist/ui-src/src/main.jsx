@@ -572,6 +572,7 @@ const providerKinds = [
   ["speechmatics", "Speechmatics", Cloud],
   ["elevenlabs", "ElevenLabs", Cloud],
   ["elevenlabs_agent", "ElevenLabs Agent (Live)", Radio],
+  ["deepslate", "Deepslate Live", Radio],
   ["anthropic", "Anthropic", Cloud],
   ["aws_bedrock", "Bedrock", Cloud],
   ["aws_nova_sonic", "AWS Nova Sonic", Radio],
@@ -639,13 +640,13 @@ const stepProviders = {
   tts: ["cartesia", "gradium", "google_cloud_tts", "google_streaming_tts", "elevenlabs", "openai_cloud", "soniox"],
   tools: ["home_assistant_mcp", "ha_mcp", "mcp_server"],
   web_search: ["web_search"],
-  output: ["gemini", "openai", "aws_nova_sonic", "elevenlabs_agent"],
+  output: ["gemini", "openai", "aws_nova_sonic", "elevenlabs_agent", "deepslate"],
 };
 const runtimeStepOrder = ["transport", "memory", "vad", "stt", "llm", "web_search", "tools", "flow", "tts", "output"];
 
 function allowedProvidersForStep(kind, mode) {
   if (kind === "llm" && mode === "realtime")     
-    return ["gemini", "openai", "aws_nova_sonic", "elevenlabs_agent"];
+    return ["gemini", "openai", "aws_nova_sonic", "elevenlabs_agent", "deepslate"];
   if (kind === "output" && mode === "composed") return [];
   return stepProviders[kind] || null;
 }
@@ -726,6 +727,22 @@ const templates = [
       ["output", "output", "Native audio", "elevenlabs-agent"],
     ],
   },  
+  {
+    id: "deepslate_live",
+    label: "Deepslate Live",
+    icon: Radio,
+    group: "Speech-to-speech",
+    mode: "realtime",
+    provider: "deepslate-live",
+    accent: "rose",
+    steps: [
+      ["transport", "transport", "SmallWebRTC", ""],
+      ["memory", "memory", "Session memory", ""],
+      ["llm", "llm", "Deepslate Realtime", "deepslate-live"],
+      ["tools", "tools", "HA MCP tools", "ha-mcp"],
+      ["output", "output", "Native audio", "deepslate-live"],
+    ],
+  },
   {
     id: "soniox_openai_cartesia",
     label: "Soniox + OpenAI + Cartesia",
@@ -1468,6 +1485,7 @@ function providerDefaults(provider) {
   if (provider === "cartesia") return { model: CARTESIA_MODEL, text_model: "", voice: CARTESIA_VOICE };
   if (provider === "elevenlabs") return { model: ELEVENLABS_MODEL, text_model: "", voice: ELEVENLABS_VOICE };   
   if (provider === "elevenlabs-agent" || provider === "elevenlabs_agent") return { model: "", text_model: "", voice: "" };
+  if (provider === "deepslate-live" || provider === "deepslate") return { model: "", text_model: "", voice: "" };
   if (provider === "google-cloud-tts" || provider === "google_cloud_tts") {
     return { model: "google-tts", text_model: "", voice: GOOGLE_TTS_VOICE };
   }
@@ -1604,7 +1622,7 @@ function deriveFlowMode(flow, config) {
   if (     
     !hasStt &&     
     !hasTts &&     
-    ["gemini", "openai", "aws_nova_sonic", "elevenlabs_agent"].includes(providerKind)   
+    ["gemini", "openai", "aws_nova_sonic", "elevenlabs_agent", "deepslate"].includes(providerKind)  
   ) {
     return "realtime";
   }
@@ -1781,6 +1799,7 @@ function integrationSummary(integration, config = null) {
       "speechmatics",
       "elevenlabs",
       "elevenlabs_agent",
+      "deepslate",
       "google_imagen",
       "fal_image",
     ].includes(integration.kind)
@@ -2664,7 +2683,7 @@ function validatePipeline(config, flow) {
       errors.push(`${integration.name} cannot be used as ${step.kind.toUpperCase()}.`);
     }
     if (
-      ["gemini", "gemini_cloud", "openai", "openai_cloud", "soniox", "deepgram", "cartesia", "gradium", "speechmatics", "elevenlabs", "elevenlabs_agent"].includes(
+      ["gemini", "gemini_cloud", "openai", "openai_cloud", "soniox", "deepgram", "cartesia", "gradium", "speechmatics", "elevenlabs", "elevenlabs_agent", "deepslate"].includes(
         integration.kind,
       ) &&
       secretStatus(integration, "api_key") === "missing"
@@ -4408,6 +4427,73 @@ function IntegrationSettings({
     );
   }
   
+  if (integration.kind === "deepslate") {
+    return (
+      <>
+        <SettingsSection
+          title="Deepslate Live"
+          status={secretStatus(integration, "api_key")}
+        >
+          <SecretSetting
+            integration={integration}
+            field="api_key"
+            label="API key"
+            updateIntegration={updateIntegration}
+          />
+          <TextSetting
+            integration={integration}
+            field="vendor_id"
+            label="Vendor ID"
+            updateIntegration={updateIntegration}
+            wide
+          />
+          <TextSetting
+            integration={integration}
+            field="organization_id"
+            label="Organization ID"
+            updateIntegration={updateIntegration}
+            wide
+          />
+          <TextSetting
+            integration={integration}
+            field="default_voice"
+            label="Voice ID"
+            updateIntegration={updateIntegration}
+            wide
+          />
+          <TextSetting
+            integration={integration}
+            field="tts_provider"
+            label="TTS provider (hosted or elevenlabs)"
+            updateIntegration={updateIntegration}
+            wide
+          />
+          <TextSetting
+            integration={integration}
+            field="default_tts_model"
+            label="ElevenLabs TTS model (optional)"
+            updateIntegration={updateIntegration}
+            wide
+          />
+          <TextSetting
+            integration={integration}
+            field="base_url"
+            label="Deepslate base URL"
+            updateIntegration={updateIntegration}
+            wide
+          />
+        </SettingsSection>
+        <div className="empty-state wide">
+          Speech-to-speech over the Deepslate Realtime WebSocket: server-side VAD,
+          reasoning and voice run on Deepslate. Vendor ID, Organization ID and API key
+          are in the Deepslate dashboard. Use a hosted voice ID, or set the TTS provider
+          to elevenlabs to use an ElevenLabs voice (the key of the ElevenLabs integration
+          is re-used).
+        </div>
+      </>
+    );
+  }
+
   if (["cartesia", "elevenlabs"].includes(integration.kind)) {
     return (
       <SettingsSection title={kindLabel(integration.kind)} status={secretStatus(integration, "api_key")}>
