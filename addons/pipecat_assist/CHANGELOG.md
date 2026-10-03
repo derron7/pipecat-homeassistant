@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.86
+## 0.1.87
 - Bug: Fix missing provider entry 
 
 ## 0.1.86
