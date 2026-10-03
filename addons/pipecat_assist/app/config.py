@@ -162,6 +162,7 @@ class IntegrationConfig(BaseModel):
         "speechmatics",
         "elevenlabs",
         "elevenlabs_agent",
+        "deepslate",
         "anthropic",
         "aws_bedrock",
         "aws_nova_sonic",
@@ -184,6 +185,9 @@ class IntegrationConfig(BaseModel):
     region: str = ""
     deployment: str = ""
     agent_id: str = ""
+    vendor_id: str = ""
+    organization_id: str = ""
+    tts_provider: str = "hosted"
     language: str = "en"
     speed: float = Field(default=1.0, ge=0.25, le=1.5)
     tts_streaming_mode: Literal["sentence", "token"] = "sentence"
@@ -354,6 +358,22 @@ def default_integrations() -> list[IntegrationConfig]:
             agent_id=os.getenv("ELEVENLABS_AGENT_ID", ""),
             base_url=os.getenv("ELEVENLABS_AGENT_BASE_URL", "wss://api.elevenlabs.io"),
         ),        
+        IntegrationConfig(
+            id="deepslate-live",
+            name="Deepslate Live",
+            kind="deepslate",
+            enabled=bool(
+                os.getenv("DEEPSLATE_API_KEY")
+                and os.getenv("DEEPSLATE_VENDOR_ID")
+                and os.getenv("DEEPSLATE_ORGANIZATION_ID")
+            ),
+            api_key=os.getenv("DEEPSLATE_API_KEY", ""),
+            base_url=os.getenv("DEEPSLATE_BASE_URL", "https://app.deepslate.eu"),
+            vendor_id=os.getenv("DEEPSLATE_VENDOR_ID", ""),
+            organization_id=os.getenv("DEEPSLATE_ORGANIZATION_ID", ""),
+            tts_provider=os.getenv("DEEPSLATE_TTS_PROVIDER", "hosted"),
+            default_voice=os.getenv("DEEPSLATE_VOICE_ID", ""),
+        ),
         IntegrationConfig(
             id="anthropic",
             name="Anthropic",
@@ -531,6 +551,7 @@ class FlowConfig(BaseModel):
         "gemini_live_home",
         "aws_nova_sonic",
         "elevenlabs_live",
+        "deepslate_live",
         "soniox_openai_cartesia",
         "soniox_openai_gradium",
         "deepgram_gemini_google_tts",
@@ -1076,7 +1097,7 @@ def _strip_unsupported_s2s_flow_steps(config: RuntimeConfig, flow: FlowConfig) -
     is_s2s = flow.mode == "realtime" or (
         not has_stt
         and not has_tts
-        and provider_kind in {"gemini", "openai", "aws_nova_sonic", "elevenlabs_agent"}
+        and provider_kind in {"gemini", "openai", "aws_nova_sonic", "elevenlabs_agent", "deepslate"}
     )
     if not is_s2s:
         return False
