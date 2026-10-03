@@ -1,6 +1,9 @@
 # Changelog
 
 ## 0.1.86
+- Bug: Fix missing provider entry 
+
+## 0.1.86
 - New **Deepslate Live** speech-to-speech integration (Deepslate Realtime over WebSocket)
   - New integration kind `deepslate` with API key, vendor ID, organization ID, voice ID, TTS provider (hosted voice or ElevenLabs voice) and base URL
   - New built-in pipeline template **Deepslate Live** (SmallWebRTC, session memory, Deepslate Realtime, HA MCP tools, native audio)
