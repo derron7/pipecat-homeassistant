@@ -1,21 +1,21 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kyvaith/pipecat-homeassistant/main/addons/pipecat_assist/logo.png" alt="Pipecat Assist" width="420">
+  <img src="https://raw.githubusercontent.com/derron7/pipecat-homeassistant/main/addons/pipecat_assist/logo.png" alt="Pipecat Assist" width="420">
 </p>
 
 # Pipecat Home Assistant
 
 <p align="center">
-  <a href="https://github.com/kyvaith/pipecat-homeassistant/actions/workflows/ci.yml">
-    <img alt="CI" src="https://github.com/kyvaith/pipecat-homeassistant/actions/workflows/ci.yml/badge.svg?branch=main">
+  <a href="https://github.com/derron7/pipecat-homeassistant/actions/workflows/ci.yml">
+    <img alt="CI" src="https://github.com/derron7/pipecat-homeassistant/actions/workflows/ci.yml/badge.svg?branch=main">
   </a>
-  <a href="https://github.com/kyvaith/pipecat-homeassistant/actions/workflows/publish.yml">
-    <img alt="Publish add-on image" src="https://github.com/kyvaith/pipecat-homeassistant/actions/workflows/publish.yml/badge.svg">
+  <a href="https://github.com/derron7/pipecat-homeassistant/actions/workflows/publish.yml">
+    <img alt="Publish add-on image" src="https://github.com/derron7/pipecat-homeassistant/actions/workflows/publish.yml/badge.svg">
   </a>
-  <a href="https://github.com/kyvaith/pipecat-homeassistant/releases">
-    <img alt="Latest release" src="https://img.shields.io/github/v/release/kyvaith/pipecat-homeassistant?label=release">
+  <a href="https://github.com/derron7/pipecat-homeassistant/releases">
+    <img alt="Latest release" src="https://img.shields.io/github/v/release/derron7/pipecat-homeassistant?label=release">
   </a>
   <a href="LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/kyvaith/pipecat-homeassistant">
+    <img alt="License" src="https://img.shields.io/github/license/derron7/pipecat-homeassistant">
   </a>
   <a href="https://www.home-assistant.io/">
     <img alt="Home Assistant" src="https://img.shields.io/badge/Home%20Assistant-add--on%20%2B%20integration-41BDF5?logo=homeassistant&logoColor=white">
@@ -85,7 +85,7 @@ responsive realtime experience.
    Store > Repositories**:
 
    ```text
-   https://github.com/kyvaith/pipecat-homeassistant
+   https://github.com/derron7/pipecat-homeassistant
    ```
 
 2. Add the same repository URL to **HACS > Custom repositories** as an
@@ -288,7 +288,7 @@ The repository includes the `va_pipecat` ESPHome external component:
 
 ```yaml
 external_components:
-  - source: github://kyvaith/pipecat-homeassistant@dev
+  - source: github://derron7/pipecat-homeassistant@main
     components: [va_pipecat]
 
 api:
