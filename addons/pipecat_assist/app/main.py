@@ -5020,7 +5020,7 @@ async def run_bot(
     audio_debug = None
 
     if runtime_mode == "s2s":
-        if provider_kind not in {"openai", "gemini", "aws_nova_sonic", "elevenlabs_agent"}:
+        if provider_kind not in {"openai", "gemini", "aws_nova_sonic", "elevenlabs_agent", "deepslate"}:
             raise RuntimeError(
                 f"Realtime speech-to-speech runtime for {provider_kind} is not supported"
             )
