@@ -51,7 +51,7 @@ device control through MCP.
 - **Home Assistant AI Tasks support** for generated data and image-generation
   tasks, using dedicated image providers such as Google Imagen or fal.
 - **Cloud provider integrations** for Gemini, OpenAI, Soniox, Deepgram, Speechmatics,
-  Cartesia, Gradium, **ElevenLabs (Agents Live + TTS)**, Google Cloud TTS, AWS Bedrock,
+  Cartesia, Gradium, ElevenLabs (Agents Live + TTS), Deepslate Live, Google Cloud TTS, AWS Bedrock,
   AWS Nova Sonic, and OpenAI-compatible endpoints.
   
 ## Where you can use it
@@ -243,6 +243,19 @@ STT, LLM and TTS to ElevenLabs' Conversational AI platform. You provide an
 WebSocket and plays back the agent's audio in full duplex. Home Assistant
 MCP tools are exposed as ElevenLabs *client tools* so the agent can switch
 lights, run scenes and call scripts during the conversation.
+
+### Deepslate Live
+
+The `Deepslate Live` profile is a speech-to-speech pipeline that delegates voice activity detection, reasoning and speech synthesis to [Deepslate Realtime](https://docs.deepslate.eu/websocket), a European (EU-hosted) speech-to-speech model. Pipecat streams the microphone audio over the Deepslate WebSocket API and plays back the answer in full duplex, including barge-in. Home Assistant MCP tools are registered as Deepslate function tools, so the assistant can switch lights, run scenes and call scripts during the conversation. It works with the Lovelace card, the add-on assistant card and ESPHome `va_pipecat` satellites such as Home Assistant Voice PE.
+
+Setup:
+
+1. Create an API key and note your **Vendor ID** and **Organization ID** in the Deepslate dashboard.
+2. Open **Integrations > Deepslate Live**, enter API key, Vendor ID, Organization ID and a **Voice ID** (hosted voice). Optionally set **TTS provider** to `elevenlabs` to use an ElevenLabs voice ID; the API key of the ElevenLabs integration is re-used.
+3. Open **Pipelines**, create a pipeline from the **Deepslate Live** template and make it the active pipeline.
+4. For Voice PE, keep the ESPHome `va_pipecat` configuration unchanged — the satellite uses the active pipeline.
+
+The assistant instructions of the pipeline are sent to Deepslate as the system prompt. Advanced tuning through environment variables: `DEEPSLATE_TEMPERATURE`, `DEEPSLATE_VAD_CONFIDENCE`, `DEEPSLATE_VAD_MIN_VOLUME`, `DEEPSLATE_VAD_START_MS`, `DEEPSLATE_VAD_STOP_MS`.
 
 ## Home Assistant Assist and Lovelace
 
