@@ -355,8 +355,13 @@ For a container build:
 docker build -t pipecat-assist:dev addons/pipecat_assist
 ```
 
+## Credits & Origin
+This repository is actively maintained as a feature-extended fork of **kyvaith/pipecat-homeassistant**. Huge thanks to **@kyvaith** for building the solid foundation that brings real-time, multimodal voice assistants into Home Assistant!
+While the core setup remains based on the original project, this fork includes custom modifications and features tailored for advanced satellite behaviors.
+
 ## References
 
+- Upstream Project (Original): https://github.com/kyvaith/pipecat-homeassistant
 - Pipecat: https://github.com/pipecat-ai/pipecat
 - Pipecat Flows: https://github.com/pipecat-ai/pipecat-flows
 - Pipecat Flows Editor: https://github.com/pipecat-ai/pipecat-flows-editor
