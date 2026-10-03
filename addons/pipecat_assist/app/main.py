@@ -4273,7 +4273,7 @@ def _runtime_flow_errors(config: RuntimeConfig, flow: FlowConfig) -> list[str]:
     runtime_mode = _runtime_mode(flow, provider_kind)
 
     if runtime_mode == "s2s":
-        if provider_kind not in {"openai", "gemini", "aws_nova_sonic", "elevenlabs_agent"}:
+        if provider_kind not in {"openai", "gemini", "aws_nova_sonic", "elevenlabs_agent", "deepslate"}:
             errors.append(f"Realtime speech-to-speech runtime for {provider_kind} is not supported.")
         if any(step.kind in {"stt", "tts"} and step.enabled for step in flow.steps):
             errors.append("Speech-to-speech pipelines cannot use separate STT or TTS steps.")
@@ -4559,6 +4559,57 @@ def _elevenlabs_live_service(
         tool_handler=tool_handler,
     )
     
+def _deepslate_live_service(
+    *,
+    api_key: str,
+    integration: IntegrationConfig,
+    config,
+    flow,
+    tools_schema=None,
+    mcp_bridge=None,
+):
+    from app.config import DEFAULT_INSTRUCTIONS
+    from app.deepslate_live import DeepslateLiveService, DeepslateLiveSettings
+
+    tool_handler = None
+    if mcp_bridge is not None:
+
+        async def tool_handler(tool_name: str, parameters: dict) -> str:
+            return await mcp_bridge.call_tool(tool_name, parameters)
+
+    instructions = ""
+    for attr in ("instructions", "system_prompt", "system_instruction"):
+        value = getattr(flow, attr, "")
+        if isinstance(value, str) and value.strip():
+            instructions = value.strip()
+            break
+
+    # Optional: ElevenLabs TTS inside Deepslate re-uses the ElevenLabs integration key.
+    elevenlabs_api_key = os.getenv("ELEVENLABS_API_KEY", "")
+    for item in getattr(config, "integrations", None) or []:
+        if getattr(item, "kind", "") == "elevenlabs" and getattr(item, "api_key", ""):
+            elevenlabs_api_key = item.api_key
+            break
+
+    return DeepslateLiveService(
+        settings=DeepslateLiveSettings.with_env_overrides(
+            api_key=api_key or integration.api_key,
+            vendor_id=integration.vendor_id or os.getenv("DEEPSLATE_VENDOR_ID", ""),
+            organization_id=integration.organization_id
+            or os.getenv("DEEPSLATE_ORGANIZATION_ID", ""),
+            base_url=integration.base_url
+            or os.getenv("DEEPSLATE_BASE_URL", "https://app.deepslate.eu"),
+            system_prompt=instructions or DEFAULT_INSTRUCTIONS,
+            tts_provider=integration.tts_provider or "hosted",
+            voice_id=integration.default_voice or os.getenv("DEEPSLATE_VOICE_ID", ""),
+            tts_model_id=integration.default_tts_model,
+            elevenlabs_api_key=elevenlabs_api_key,
+        ),
+        tool_handler=tool_handler,
+        tools_schema=tools_schema if mcp_bridge is not None else None,
+    )
+
+
 def _aws_nova_sonic_service(
     *,
     integration: IntegrationConfig,
@@ -4982,6 +5033,10 @@ async def run_bot(
             api_key = (integration.api_key if integration else "") or os.getenv(
                 "ELEVENLABS_AGENT_API_KEY", os.getenv("ELEVENLABS_API_KEY", "")
             )
+        elif provider_kind == "deepslate":
+            api_key = (integration.api_key if integration else "") or os.getenv(
+                "DEEPSLATE_API_KEY", ""
+            )
         else:
             api_key = ""
 
@@ -5018,6 +5073,21 @@ async def run_bot(
                 integration=integration,
                 mcp_bridge=bridge if (flow.mcp_enabled and bridge) else None,
             )
+        elif provider_kind == "deepslate":
+            integration = _require_integration(
+                integration,
+                "Deepslate Live",
+                fields=("vendor_id", "organization_id"),
+            )
+            realtime_model = "deepslate-realtime"
+            llm = _deepslate_live_service(
+                api_key=api_key,
+                integration=integration,
+                config=config,
+                flow=flow,
+                tools_schema=tools_schema,
+                mcp_bridge=bridge if (flow.mcp_enabled and bridge) else None,
+            )
         elif provider_kind == "gemini":
             realtime_model = _model_name(flow, integration, provider_kind)
             llm = _gemini_live_service(
@@ -5037,7 +5107,7 @@ async def run_bot(
                 integration=integration,
                 tools_schema=tools_schema,
             )
-        if provider_kind != "elevenlabs_agent":
+        if provider_kind not in {"elevenlabs_agent", "deepslate"}:
             _register_local_tool_handlers(llm, local_tool_schemas)
 
         logger.info(
@@ -5047,7 +5117,7 @@ async def run_bot(
             flow.id,
         )
 
-        if bridge and mcp_tools_schema and provider_kind != "elevenlabs_agent":
+        if bridge and mcp_tools_schema and provider_kind not in {"elevenlabs_agent", "deepslate"}:
             await bridge.register_tools_schema(mcp_tools_schema, llm)
 
         greeting_messages = (
