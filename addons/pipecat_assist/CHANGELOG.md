@@ -1,7 +1,9 @@
 # Changelog
 
-## 0.1.87
+## 0.1.88
 - Audio Upgrade: Raised sample rate from 16kHz to **24kHz** to match native Deepslate TTS and fix slow/low pitch playback on voice satellites.
+
+## 0.1.87
 - Bug: Fix missing provider entry 
 
 ## 0.1.86
