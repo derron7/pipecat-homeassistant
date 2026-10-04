@@ -8,8 +8,12 @@ bridge) and re-uses the protocol implementation of the official Deepslate SDK
 ``deepslate.pipecat.DeepslateRealtimeLLMService``):
 
 * consumes ``InputAudioRawFrame`` from the transport, downmixes/resamples to
-  16 kHz PCM16 mono and streams it to Deepslate (server-side VAD, so no local
-  VAD step is needed),
+  24 kHz PCM16 mono and streams it to Deepslate (server-side VAD, so no local
+  VAD step is needed). 24 kHz matches Gemini Live / OpenAI Realtime and the
+  ESPHome Voice PE output contract (``va_pipecat.OUTPUT_SAMPLE_RATE = 24000``).
+  Deepslate's ``InitializeSessionRequest`` uses the same rate for input *and*
+  output, so sending 16 kHz made the hosted TTS (native 24 kHz) play a fifth
+  too low on Voice PE.
 * turns ``ModelAudioChunk`` events into ``TTSAudioRawFrame`` so the transport
   (WebRTC, Lovelace card or the ESPHome ``va_pipecat`` satellite on Home
   Assistant Voice PE) plays the agent voice,
@@ -70,15 +74,20 @@ from deepslate.core import (
     build_user_agent,
 )
 
-DEEPSLATE_INPUT_SAMPLE_RATE = 16_000
-DEEPSLATE_INPUT_CHANNELS = 1
+# Deepslate hosted TTS is native 24 kHz. The session proto uses one rate for
+# both input_audio_line and output_audio_line, so we send 24 kHz too.
+# Home Assistant Voice PE (va_pipecat) plays at 24 kHz; Gemini Live and
+# OpenAI Realtime in this add-on do the same. 16 kHz here makes 24 kHz TTS
+# play 1.5× too slow / too low on the satellite.
+DEEPSLATE_SAMPLE_RATE = 24_000
+DEEPSLATE_CHANNELS = 1
 DEEPSLATE_DEFAULT_BASE_URL = "https://app.deepslate.eu"
 DEEPSLATE_TOOL_TIMEOUT_SECONDS = 60.0
 # Deepslate closes idle sessions after ~30 s without packets. Silent audio
 # counts as activity, so we send a 20 ms silence packet after 8 s of quiet.
 KEEPALIVE_IDLE_SECONDS = 8.0
 KEEPALIVE_CHECK_SECONDS = 4.0
-_SILENCE_20MS = b"\x00" * (DEEPSLATE_INPUT_SAMPLE_RATE // 50 * 2)
+_SILENCE_20MS = b"\x00" * (DEEPSLATE_SAMPLE_RATE // 50 * 2)
 
 ToolHandler = Callable[[str, dict[str, Any]], Awaitable[Any]]
 
@@ -211,11 +220,13 @@ class DeepslateLiveService(FrameProcessor):
         self._tools = _normalise_tools(tools_schema)
 
         self._session: Optional[DeepslateSession] = None
-        self._resampler = create_stream_resampler()
+        self._input_resampler = create_stream_resampler()
+        self._output_resampler = create_stream_resampler()
         self._keepalive_task: Optional[asyncio.Task] = None
         self._tool_tasks: set[asyncio.Task] = set()
         self._bot_speaking = False
         self._audio_pending = False
+        self._logged_output_rate = False
         self._ready = asyncio.Event()
         self._failed = False
         self._last_audio_sent = time.monotonic()
@@ -368,6 +379,7 @@ class DeepslateLiveService(FrameProcessor):
         self._ready.clear()
         self._bot_speaking = False
         self._audio_pending = False
+        self._logged_output_rate = False
 
     async def _fatal(self, message: str) -> None:
         self._failed = True
@@ -385,15 +397,15 @@ class DeepslateLiveService(FrameProcessor):
         channels = frame.num_channels or 1
         if channels > 1:
             audio = _downmix_to_mono(audio, channels)
-        if frame.sample_rate != DEEPSLATE_INPUT_SAMPLE_RATE:
-            audio = await self._resampler.resample(
-                audio, frame.sample_rate, DEEPSLATE_INPUT_SAMPLE_RATE
+        if frame.sample_rate != DEEPSLATE_SAMPLE_RATE:
+            audio = await self._input_resampler.resample(
+                audio, frame.sample_rate, DEEPSLATE_SAMPLE_RATE
             )
         if not audio:
             return
 
         try:
-            await session.send_audio(audio, DEEPSLATE_INPUT_SAMPLE_RATE, DEEPSLATE_INPUT_CHANNELS)
+            await session.send_audio(audio, DEEPSLATE_SAMPLE_RATE, DEEPSLATE_CHANNELS)
             self._last_audio_sent = time.monotonic()
         except Exception as err:  # noqa: BLE001
             logger.debug("Deepslate send_audio failed: {}", err)
@@ -409,7 +421,7 @@ class DeepslateLiveService(FrameProcessor):
                     continue
                 try:
                     await session.send_audio(
-                        _SILENCE_20MS, DEEPSLATE_INPUT_SAMPLE_RATE, DEEPSLATE_INPUT_CHANNELS
+                        _SILENCE_20MS, DEEPSLATE_SAMPLE_RATE, DEEPSLATE_CHANNELS
                     )
                     self._last_audio_sent = time.monotonic()
                 except Exception as err:  # noqa: BLE001
@@ -466,6 +478,27 @@ class DeepslateLiveService(FrameProcessor):
     async def _on_audio_chunk(self, pcm: bytes, sample_rate: int, channels: int) -> None:
         if not pcm:
             return
+        channels = channels or 1
+        if channels > 1:
+            pcm = _downmix_to_mono(pcm, channels)
+            channels = 1
+        # The SDK reports the *session* rate (whatever we sent on init), not
+        # a per-chunk header. Hosted TTS is 24 kHz; if a chunk still arrives
+        # tagged otherwise, resample so Voice PE (24 kHz) plays at the right pitch.
+        reported = sample_rate or DEEPSLATE_SAMPLE_RATE
+        if not self._logged_output_rate:
+            self._logged_output_rate = True
+            logger.info(
+                "Deepslate Live first audio chunk: {} bytes, reported {} Hz {} ch → playing at {} Hz",
+                len(pcm),
+                reported,
+                channels,
+                DEEPSLATE_SAMPLE_RATE,
+            )
+        if reported != DEEPSLATE_SAMPLE_RATE:
+            pcm = await self._output_resampler.resample(pcm, reported, DEEPSLATE_SAMPLE_RATE)
+            if not pcm:
+                return
         if not self._bot_speaking:
             self._bot_speaking = True
             await self.push_frame(TTSStartedFrame())
@@ -473,8 +506,8 @@ class DeepslateLiveService(FrameProcessor):
         await self.push_frame(
             TTSAudioRawFrame(
                 audio=pcm,
-                sample_rate=sample_rate or 24_000,
-                num_channels=channels or 1,
+                sample_rate=DEEPSLATE_SAMPLE_RATE,
+                num_channels=1,
             )
         )
 
