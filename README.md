@@ -32,12 +32,12 @@ device control through MCP.
 
 ## What Pipecat Assist offers
 
-- **Realtime voice assistants** over WebRTC, with Gemini Live as the default
-  first-run speech-to-speech pipeline.
+- **Realtime voice assistants** over WebRTC and WebSocket, with Gemini Live,
+  Elevenlabs Live and Deepslate speech-to-speech pipeline.
 - **Custom pipeline builder** for speech-to-speech and composed realtime flows:
   mix STT, LLM, TTS, memory, web search, Home Assistant tools, and Pipecat
   Flows in one runtime profile.
-- **Cloud provider integrations** for Gemini, OpenAI, Soniox, Deepgram,
+- **Cloud provider integrations** for Gemini, OpenAI, Soniox, Deepgram, Deepslate,
   Speechmatics, Cartesia, Gradium, ElevenLabs, Google Cloud TTS, AWS Bedrock,
   AWS Nova Sonic, and OpenAI-compatible endpoints.
 - **Local AI options** through Ollama, local runtime endpoints, and custom
@@ -50,9 +50,6 @@ device control through MCP.
   features rather than hidden provider toggles.
 - **Home Assistant AI Tasks support** for generated data and image-generation
   tasks, using dedicated image providers such as Google Imagen or fal.
-- **Cloud provider integrations** for Gemini, OpenAI, Soniox, Deepgram, **Deepslate**, Speechmatics,
-  Cartesia, Gradium, ElevenLabs (**Agents Live** + TTS), Deepslate Live, Google Cloud TTS, AWS Bedrock,
-  AWS Nova Sonic, and OpenAI-compatible endpoints.
   
 ## Where you can use it
 
