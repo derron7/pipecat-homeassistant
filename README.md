@@ -309,8 +309,8 @@ va_pipecat:
   auto_provision: true
   microphone:
     microphone: processed_microphone
-    channels: 0
-  speaker: assistant_speaker
+    channels: 0 #  Use channel 0 for HA Voice PE's onboard XMOS hardware echo cancellation
+  speaker: assistant_speaker # Use 'announcement_resampling_speaker' for proper HA Voice PE audio scaling
   barge_in: true
 ```
 
