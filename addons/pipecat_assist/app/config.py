@@ -539,6 +539,9 @@ def _looks_like_old_pizza_example(flow: dict[str, Any]) -> bool:
     return "start_pizza_order" in functions and "place_pizza_order" in functions
 
 
+MAX_FLOW_NAME_LENGTH = 80
+
+
 class FlowConfig(BaseModel):
     """One realtime assistant pipeline."""
 
@@ -588,6 +591,18 @@ class FlowConfig(BaseModel):
     @classmethod
     def validate_id(cls, value: str) -> str:
         return _validate_id(value, "Flow id")
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        """Pipeline names are free text; the id (not the name) is the stable key."""
+
+        clean = " ".join(str(value).split())
+        if not clean:
+            raise ValueError("Pipeline name must not be empty")
+        if len(clean) > MAX_FLOW_NAME_LENGTH:
+            raise ValueError(f"Pipeline name must not exceed {MAX_FLOW_NAME_LENGTH} characters")
+        return clean
 
     def model_step(self) -> PipelineStepConfig | None:
         """Return the primary LLM/realtime step."""
