@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.89
+- **Pipelines**: the pipeline editor now shows the satellite (ESP) endpoint for the selected pipeline, with a copy button. It is the same URL as "Manual fallback endpoint" under Runtime, but with the `flow_id` of that pipeline.
+- **Pipelines**: the pipeline name is editable at any time. Adding and duplicating a pipeline now asks for a name first. Names must be non-empty and unique; the pipeline ID stays unchanged on rename, so the active pipeline, ESP endpoints and Home Assistant entries keep working.
+- New pipeline IDs are derived from the name and are guaranteed unique (previously a counter that could collide after deleting pipelines).
+- Backend: pipeline names are trimmed, must not be empty and are limited to 80 characters.
+
 ## 0.1.88
 - Audio Upgrade: Raised sample rate from 16kHz to **24kHz** to match native Deepslate TTS and fix slow/low pitch playback on voice satellites.
 
