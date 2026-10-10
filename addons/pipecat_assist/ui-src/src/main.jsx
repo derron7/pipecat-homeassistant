@@ -54,6 +54,18 @@ const UI_TRANSLATIONS = {
     "Set active": "Ustaw aktywny",
     "Active": "Aktywny",
     "Duplicate": "Duplikuj",
+    "Duplicate pipeline": "Duplikuj pipeline",
+    "New pipeline": "Nowy pipeline",
+    "Pipeline name": "Nazwa pipeline",
+    "Unnamed pipeline": "Pipeline bez nazwy",
+    "Satellite endpoint (ESP)": "Endpoint satelity (ESP)",
+    "Create": "Utwórz",
+    "Copy": "Kopiuj",
+    "Cancel": "Anuluj",
+    "Pipeline name is required.": "Nazwa pipeline jest wymagana.",
+    "Another pipeline already uses this name.": "Inny pipeline używa już tej nazwy.",
+    "Pipeline name is too long (max. 80 characters).": "Nazwa pipeline jest za długa (maks. 80 znaków).",
+    "Connects an ESP to this pipeline. Save the pipeline first; the ID stays the same when you rename it.": "Łączy ESP z tym pipeline. Najpierw zapisz pipeline; ID nie zmienia się po zmianie nazwy.",
     "Delete": "Usuń",
     "Save": "Zapisz",
     "Save pipeline": "Zapisz pipeline",
@@ -1263,6 +1275,41 @@ function slugify(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+// Pipeline naming helpers -------------------------------------------------
+// The pipeline *id* is generated once (from the name at creation time) and then
+// stays stable. Renaming only changes the display name, so the active pipeline,
+// the satellite endpoint (flow_id) and Home Assistant entries keep working.
+function uniqueFlowId(name, flows) {
+  const base = slugify(name || "") || "pipeline";
+  const taken = new Set((flows || []).map((item) => item.id));
+  if (!taken.has(base)) return base;
+  let counter = 2;
+  while (taken.has(`${base}-${counter}`)) counter += 1;
+  return `${base}-${counter}`;
+}
+
+function flowNameError(name, flows, flowId = null) {
+  const clean = String(name || "").trim();
+  if (!clean) return "Pipeline name is required.";
+  if (clean.length > 80) return "Pipeline name is too long (max. 80 characters).";
+  const duplicate = (flows || []).some(
+    (item) => item.id !== flowId && String(item.name || "").trim().toLowerCase() === clean.toLowerCase(),
+  );
+  return duplicate ? "Another pipeline already uses this name." : "";
+}
+
+// Endpoint a satellite uses to reach one specific pipeline: the global ESPHome
+// URL with its flow_id replaced by the id of the given pipeline.
+function flowEndpointUrl(config, flowId) {
+  const base = config?.esphome_ws_url || "";
+  if (!base || !flowId) return base;
+  const queryStart = base.indexOf("?");
+  const head = queryStart === -1 ? base : base.slice(0, queryStart);
+  const params = new URLSearchParams(queryStart === -1 ? "" : base.slice(queryStart + 1));
+  params.set("flow_id", flowId);
+  return `${head}?${params.toString()}`;
+}
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -1874,6 +1921,7 @@ function App() {
   const [tab, setTab] = useState("assistant");
   const [pipelineStage, setPipelineStage] = useState("list");
   const [editingFlowId, setEditingFlowId] = useState("");
+  const [namePrompt, setNamePrompt] = useState(null);
   const [integrationStage, setIntegrationStage] = useState("list");
   const [selectedStepId, setSelectedStepId] = useState("");
   const [selectedIntegrationId, setSelectedIntegrationId] = useState("gemini");
@@ -2060,37 +2108,52 @@ function App() {
     openFlow(activeFlow.id);
   }
 
+  // Adding and duplicating first ask for a name, then create the pipeline.
   function addFlow(templateId = "gemini_live_home") {
     const template = templates.find((item) => item.id === templateId) || templates[0];
-    const baseName = template.label;
-    const id = slugify(`${baseName}-${config.flows.length + 1}`);
-    const flow = applyTemplate(
-      {
-        ...clone(defaultFlow),
-        id,
-        name: baseName,
-      },
-      template.id,
-      config,
-    );
-    updateConfig((draft) => {
-      draft.flows.push(flow);
-      return draft;
-    });
-    setEditingFlowId(id);
-    setSelectedStepId("llm");
-    setPipelineStage("editor");
+    setNamePrompt({ mode: "add", templateId: template.id, value: template.label });
   }
 
   function duplicateFlow() {
-    const copy = clone(selectedFlow);
-    copy.id = slugify(`${selectedFlow.id}-copy-${config.flows.length + 1}`);
-    copy.name = `${selectedFlow.name} copy`;
-    updateConfig((draft) => {
-      draft.flows.push(copy);
-      return draft;
-    });
-    setEditingFlowId(copy.id);
+    setNamePrompt({ mode: "duplicate", templateId: "", value: `${selectedFlow.name} copy` });
+  }
+
+  function confirmNamePrompt() {
+    if (!namePrompt) return;
+    const name = namePrompt.value.trim();
+    if (flowNameError(name, config.flows)) return;
+    const id = uniqueFlowId(name, config.flows);
+    if (namePrompt.mode === "duplicate") {
+      const copy = clone(selectedFlow);
+      copy.id = id;
+      copy.name = name;
+      updateConfig((draft) => {
+        draft.flows.push(copy);
+        return draft;
+      });
+      setEditingFlowId(id);
+      setPipelineStage("editor");
+    } else {
+      const template = templates.find((item) => item.id === namePrompt.templateId) || templates[0];
+      const flow = applyTemplate({ ...clone(defaultFlow), id, name }, template.id, config);
+      updateConfig((draft) => {
+        draft.flows.push(flow);
+        return draft;
+      });
+      setEditingFlowId(id);
+      setSelectedStepId("llm");
+      setPipelineStage("editor");
+    }
+    setNamePrompt(null);
+  }
+
+  async function copyFlowEndpoint(flowId) {
+    try {
+      await navigator.clipboard.writeText(flowEndpointUrl(config, flowId));
+      setMessage({ text: "Pipeline endpoint copied", tone: "ok" });
+    } catch {
+      setMessage({ text: "Could not copy - select the URL and copy it manually", tone: "error" });
+    }
   }
 
   function deleteFlow() {
@@ -2251,7 +2314,16 @@ function App() {
   }
 
   async function save() {
-    await persistConfig(config);
+    const invalid = config.flows.find((flow) => flowNameError(flow.name, config.flows, flow.id));
+    if (invalid) {
+      setEditingFlowId(invalid.id);
+      setMessage({ text: flowNameError(invalid.name, config.flows, invalid.id), tone: "error" });
+      return;
+    }
+    await persistConfig({
+      ...config,
+      flows: config.flows.map((flow) => ({ ...flow, name: String(flow.name).trim() })),
+    });
   }
 
   async function activateFlow(flowId) {
@@ -2479,6 +2551,7 @@ function App() {
             insertStep={insertStep}
             deleteStep={deleteStep}
             duplicateFlow={duplicateFlow}
+            copyFlowEndpoint={copyFlowEndpoint}
             deleteFlow={deleteFlow}
             openFlow={openFlow}
             addFlow={addFlow}
@@ -2489,6 +2562,48 @@ function App() {
             activeFlowId={config.selected_flow_id}
             activateFlow={activateFlow}
           />
+        )}
+
+        {namePrompt && (
+          <div className="modal-backdrop" role="presentation" onClick={() => setNamePrompt(null)}>
+            <div
+              className="modal-card"
+              role="dialog"
+              aria-modal="true"
+              aria-label={namePrompt.mode === "duplicate" ? t("Duplicate pipeline") : t("New pipeline")}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h3>{namePrompt.mode === "duplicate" ? t("Duplicate pipeline") : t("New pipeline")}</h3>
+              <Field label={t("Pipeline name")} wide>
+                <input
+                  autoFocus
+                  spellCheck="false"
+                  maxLength={80}
+                  value={namePrompt.value}
+                  onChange={(event) => setNamePrompt({ ...namePrompt, value: event.target.value })}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") confirmNamePrompt();
+                    if (event.key === "Escape") setNamePrompt(null);
+                  }}
+                />
+              </Field>
+              {flowNameError(namePrompt.value, config.flows) && (
+                <span className="field-error">{t(flowNameError(namePrompt.value, config.flows))}</span>
+              )}
+              <div className="button-row">
+                <Button variant="secondary" onClick={() => setNamePrompt(null)}>
+                  {t("Cancel")}
+                </Button>
+                <Button
+                  icon={Plus}
+                  onClick={confirmNamePrompt}
+                  disabled={Boolean(flowNameError(namePrompt.value, config.flows))}
+                >
+                  {namePrompt.mode === "duplicate" ? t("Duplicate") : t("Create")}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         {tab === "integrations" && (
@@ -2605,6 +2720,7 @@ function validatePipeline(config, flow) {
   const errors = [];
   const warnings = [];
   if (!flow.enabled) errors.push("Active pipeline is disabled.");
+  if (!String(flow.name || "").trim()) errors.push("Pipeline name is required.");
 
   const enabledSteps = (flow.steps || []).filter((step) => step.enabled);
   const llmSteps = enabledSteps.filter((step) => step.kind === "llm");
@@ -2754,6 +2870,7 @@ function PipelineView({
   insertStep,
   deleteStep,
   duplicateFlow,
+  copyFlowEndpoint,
   deleteFlow,
   openFlow,
   addFlow,
@@ -2765,6 +2882,7 @@ function PipelineView({
   activateFlow,
 }) {
   const validation = validatePipeline(config, flow);
+  const nameError = flowNameError(flow.name, config.flows, flow.id);
 
   if (pipelineStage === "flow") {
     return (
@@ -2853,7 +2971,7 @@ function PipelineView({
       <section className="panel main-panel">
         <div className="panel-head">
           <div>
-            <h3>{flow.name}</h3>
+            <h3>{flow.name || t("Unnamed pipeline")}</h3>
             <span>{flow.mode === "realtime" ? "speech-to-speech" : "composed realtime"}</span>
           </div>
           <div className="button-row">
@@ -2874,6 +2992,34 @@ function PipelineView({
               {t("Delete")}
             </Button>
           </div>
+        </div>
+
+        <div className="pipeline-identity">
+          <Field label={t("Pipeline name")}>
+            <input
+              spellCheck="false"
+              maxLength={80}
+              value={flow.name || ""}
+              aria-invalid={Boolean(nameError)}
+              onChange={(event) => updateFlow((draft) => ({ ...draft, name: event.target.value }))}
+              onBlur={(event) => {
+                const trimmed = event.target.value.trim();
+                if (trimmed !== event.target.value) updateFlow((draft) => ({ ...draft, name: trimmed }));
+              }}
+            />
+            {nameError && <span className="field-error">{t(nameError)}</span>}
+          </Field>
+          <div className="pipeline-endpoint">
+            <Field label={t("Satellite endpoint (ESP)")}>
+              <input readOnly spellCheck="false" value={flowEndpointUrl(config, flow.id)} />
+            </Field>
+            <Button icon={Copy} variant="secondary" onClick={() => copyFlowEndpoint(flow.id)}>
+              {t("Copy")}
+            </Button>
+          </div>
+          <small className="field-hint">
+            {t("Connects an ESP to this pipeline. Save the pipeline first; the ID stays the same when you rename it.")}
+          </small>
         </div>
 
         <div className={validation.ok ? "validation-card ok" : "validation-card error"}>
