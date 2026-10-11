@@ -5,6 +5,18 @@ configuration:
   log_level:
     name: Log level
     description: Application log level.
+  deepslate_vad_confidence:
+    name: Deepslate VAD confidence
+    description: Minimum confidence (0-1) to treat audio as speech. Higher values reduce false triggers from echo.
+  deepslate_vad_min_volume:
+    name: Deepslate VAD minimum volume
+    description: Minimum volume (0-1) for audio to count as speech.
+  deepslate_vad_start_ms:
+    name: Deepslate VAD start duration (ms)
+    description: Consecutive speech required to detect the start of a turn. Higher values make barge-in less sensitive.
+  deepslate_vad_stop_ms:
+    name: Deepslate VAD stop duration (ms)
+    description: Silence required to detect the end of a turn.
   elevenlabs_agent_api_key:
     name: ElevenLabs Agent API Key
     description: >

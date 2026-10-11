@@ -5,3 +5,15 @@ configuration:
   log_level:
     name: Poziom logow
     description: Poziom logowania aplikacji.
+  deepslate_vad_confidence:
+    name: Deepslate VAD pewnosc
+    description: Minimalna pewnosc (0-1), od ktorej dzwiek jest uznawany za mowe. Wyzsze wartosci zmniejszaja falszywe wyzwolenia przez echo.
+  deepslate_vad_min_volume:
+    name: Deepslate VAD minimalna glosnosc
+    description: Minimalna glosnosc (0-1), od ktorej dzwiek liczy sie jako mowa.
+  deepslate_vad_start_ms:
+    name: Deepslate VAD czas startu (ms)
+    description: Ciagla mowa wymagana do wykrycia poczatku wypowiedzi. Wyzsze wartosci zmniejszaja czulosc przerywania.
+  deepslate_vad_stop_ms:
+    name: Deepslate VAD czas ciszy (ms)
+    description: Cisza wymagana do wykrycia konca wypowiedzi.

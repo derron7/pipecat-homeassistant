@@ -1,4 +1,16 @@
 configuration:
+  deepslate_vad_confidence:
+    name: Deepslate VAD Konfidenz
+    description: Mindest-Konfidenz (0-1), ab der Audio als Sprache gilt. Höhere Werte verringern Fehlauslösungen durch Echo.
+  deepslate_vad_min_volume:
+    name: Deepslate VAD Mindestlautstärke
+    description: Mindestlautstärke (0-1), ab der Audio als Sprache zählt.
+  deepslate_vad_start_ms:
+    name: Deepslate VAD Startdauer (ms)
+    description: Zusammenhängende Sprache, die für den Beginn eines Turns nötig ist. Höhere Werte machen das Unterbrechen unempfindlicher.
+  deepslate_vad_stop_ms:
+    name: Deepslate VAD Stilledauer (ms)
+    description: Stille, die für das Ende eines Turns nötig ist.
   elevenlabs_agent_api_key:
     name: ElevenLabs Agent API Key
     description: >
