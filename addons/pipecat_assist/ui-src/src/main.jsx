@@ -3017,9 +3017,6 @@ function PipelineView({
               {t("Copy")}
             </Button>
           </div>
-          <small className="field-hint">
-            {t("Connects an ESP to this pipeline. Save the pipeline first; the ID stays the same when you rename it.")}
-          </small>
         </div>
 
         <div className={validation.ok ? "validation-card ok" : "validation-card error"}>
