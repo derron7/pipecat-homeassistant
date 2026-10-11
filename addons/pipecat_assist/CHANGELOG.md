@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.90
+- **Deepslate Live**: server-side VAD is now tunable in the add-on configuration: `deepslate_vad_confidence`, `deepslate_vad_min_volume`, `deepslate_vad_start_ms`, `deepslate_vad_stop_ms`. Defaults are unchanged (0.4 / 0.0 / 150 ms / 390 ms). Raising confidence, minimum volume and start duration makes the bot less likely to cut itself off on playback echo.
+
 ## 0.1.89
 - **Pipelines**: the pipeline editor now shows the satellite (ESP) endpoint for the selected pipeline, with a copy button. It is the same URL as "Manual fallback endpoint" under Runtime, but with the `flow_id` of that pipeline.
 - **Pipelines**: the pipeline name is editable at any time. Adding and duplicating a pipeline now asks for a name first. Names must be non-empty and unique; the pipeline ID stays unchanged on rename, so the active pipeline, ESP endpoints and Home Assistant entries keep working.
